@@ -1,1 +1,6 @@
 .agents/
+# Added by setup
+cache/
+__pycache__/
+.env
+*.pyc
