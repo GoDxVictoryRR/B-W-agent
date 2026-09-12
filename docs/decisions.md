@@ -92,3 +92,20 @@ Rationale: Live API testing against the user's Gemini key revealed that older
   supports native multimodal vision extraction on dataset images (validated
   on image_01.png with 100% confidence), enforces strict JSON schemas, and
   provides the lowest latency and optimal token efficiency required by evaluation.md.
+
+## ADR-010: Stage 0 — Data layer design decisions
+Date: 2026-09-12
+Decision:
+  - loader.py: one typed dataclass per CSV; all money->Decimal, all dates->datetime.date
+    at parse time, never in downstream code. Fails loudly with CSV row number on any
+    parse error.
+  - fx.py: multi-hop FX via direct -> USD pivot -> EUR pivot -> EUR->USD 3-hop.
+    Fixed bug: when a direct pair exists but has no entries <= as_of, falls through
+    to the inverse pair (needed for EUR->USD before Apr 2024 using USD->EUR inverse).
+    ZAR->IDR confirmed via 3-hop at ZAR(1000)=IDR 860,507 @ 2023-10-15.
+  - writer.py: OutputRow validates enum fields + 0<=amount_safe_to_pay<=requested_amount
+    at construction, not at write time. Column order is a named constant, never implicit.
+  - run.py: each request in a try/except; safe_default_row on any exception so one
+    bad request never crashes the whole run (harness.md failure policy).
+  - Actual data counts: 250 requests, 275 profiles, 25342 events, 134 FX rates.
+    schema.md event count was slightly off (25343 vs actual 25342).
